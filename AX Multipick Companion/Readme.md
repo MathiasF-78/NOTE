@@ -2,9 +2,7 @@
 
 ## 🧠 Vad är detta?
 
-Här har jag byggt ett Python-program med grafiskt gränssnitt (GUI) i Tkinter som jag kallar **AX Multipicking Companion**. Syftet är att hjälpa mig och mina kollegor att hämta och hantera plocklistor från arbetsorder i AX-systemet på ett smidigt sätt.
-
-Jag skapade detta projekt som en del av min egen lärresa i Python – för att förstå hur man bygger riktiga applikationer med databasanslutning, GUI, export till Excel och utskrift. Det har varit ett sätt för mig att kombinera nytta med lärande.
+Ett Python-program med grafiskt gränssnitt (GUI) i Tkinter. Syftet är att hämta och hantera plocklistor från arbetsorder i Microsoft Dynamics AX-systemet på ett smidigt sätt.
 
 ---
 
@@ -22,11 +20,11 @@ Jag skapade detta projekt som en del av min egen lärresa i Python – för att 
 
 ## 🏗️ Hur fungerar det?
 
-1. Jag matar in arbetsorder i fälten.
+1. Användare matar in arbetsorder i fälten.
 2. Trycker på **Fetch Data** – då körs en SQL-fråga mot AX-databasen.
 3. Resultatet visas i en tabell.
-4. Jag kan exportera till Excel eller skriva ut direkt.
-5. Jag kan ändra Company Code via menyn **Inställningar**.
+4. Användaren kan exportera till Excel eller skriva ut direkt.
+5. Användare kan även ändra Company Code via menyn **Inställningar**, om det skulle vara önskvärt.
 
 ---
 
