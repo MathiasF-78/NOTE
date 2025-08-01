@@ -1,6 +1,8 @@
-#################
-
+# ============================================================
+# IMPORTS
+# ============================================================
 import os
+import threading
 import tempfile
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
@@ -15,15 +17,19 @@ from openpyxl.worksheet.pagebreak import Break
 from openpyxl.worksheet.dimensions import ColumnDimension
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Border, Side, Alignment, PatternFill, Font
-#################
+from openpyxl.comments import Comment
 
-# Anslutning till AX databas med SQLAlchemy
+
+# ============================================================
+# DATABASE CONNECTION WITH SQLALCHEMY
+# ============================================================
 engine = create_engine(
     "mssql+pyodbc://DAX-SQL01-PROD.noteone.local/DAX_PROD?driver=SQL+Server&trusted_connection=yes"
 )
-#################
 
-# Funktion för att hämta data med SQL-query
+# ============================================================
+# SQL QUERY TO RETREIVE PICKING LISTS FROM WORK ORDER NUMBERS
+# ============================================================
 def fetch_data(cmpy, work_orders):
   
     query = text("""
@@ -105,9 +111,9 @@ def fetch_data(cmpy, work_orders):
     df = pd.read_sql(query, engine, params={"cmpy": "se04", "work_orders": work_orders})
     return df
 
-#################
-
-# Logg :
+# ============================================================
+# STATUSLOGGER 
+# ============================================================
 class StatusLogger:
     def __init__(self, parent):
         self.label = tk.Label(parent, text="", anchor="w", justify="left", font=("Segoe UI", 9), height=2, wraplength=500)
@@ -133,52 +139,151 @@ class StatusLogger:
         self.running = False
         if final_message:
             self.label.config(text=final_message)
-#################
 
-# Skriv ut direkt från tabellfönstret:
+# ============================================================
+# FORMATTING FOR OUTPUT
+# ============================================================
+def create_formatted_excel(df):
+    if df.empty:
+        return None
 
+    # Anpassade rubriker med radbrytningar
+    custom_headers = {
+        "Line QTY": "QTY",
+        "Total pick QTY": "Total\nQTY",
+        "On hand QTY": "In\nStock",
+        "QTY On CON/LTB PO": "CON/LTB\nPO QTY",
+        "QTY on PO delivery latest today": "ETD\nToday",
+        "Number of orders": "#\norders"
+    }
+    df.columns = [custom_headers.get(col, col) for col in df.columns]
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Result"
+    
+    #print(df.columns.tolist())
+
+    # Fasta kolumnbredder
+    fixed_widths = {
+        "A": 16,   # ItemID (tidigare 15)
+        "B": 9,    # QTY (tidigare 8)
+        "C": 9,    # Total QTY
+        "D": 5.5,  # Unit (tidigare 4.5)
+        "E": 9,    # Location
+        "F": 9,    # In Stock
+        "G": 10,   # CON/LTB PO QTY
+        "H": 9,    # Shortage?
+        "I": 8,    # ETD Today
+        "J": 8     # # orders
+    }
+
+
+
+    for col_letter, width in fixed_widths.items():
+        ws.column_dimensions[col_letter].width = width
+
+    # Färger och stilar
+    header_fill = PatternFill(start_color="0070C0", end_color="0070C0", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    alt_fill = PatternFill(start_color="D8E0F3", end_color="D8E0F3", fill_type="solid")
+    ws.row_dimensions[1].height = 42
+
+    # Skriv in data och formatera
+    for r_idx, row in enumerate(dataframe_to_rows(df, index=False, header=True), start=1):
+        for c_idx, value in enumerate(row, start=1):
+            cell = ws.cell(row=r_idx, column=c_idx, value=value)
+            if r_idx == 1:
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+                # Anpassad fontstorlek för G1, H1, I1
+                if c_idx in [7, 8, 9]:  # G=7, H=8, I=9
+                    cell.font = Font(color="FFFFFF", bold=True, size=9)    
+                    # Lägg till kommentarer
+                    comments = {
+                        7: "QTY On CON/LTB PO",
+                        8: "Shortage?",
+                        9: "QTY on PO delivery latest today"
+                    }
+                    cell.comment = Comment(comments[c_idx], "System")
+
+                else:
+                    cell.font = header_font
+            elif r_idx % 2 == 0:
+                cell.fill = alt_fill
+
+
+    # Lås rubrikraden
+    ws.freeze_panes = "A2"
+
+    # Anpassa kolumnbredd till innehåll
+    min_width = 15
+    max_width = 40
+    
+    for col_idx in range(1, ws.max_column + 1):
+        column_letter = get_column_letter(col_idx)
+        if column_letter in fixed_widths:
+            continue
+        max_length = 0
+        for row in range(2, ws.max_row + 1):
+            cell = ws.cell(row=row, column=col_idx)
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+        adjusted_width = max(min_width, min(max_length + 2, max_width))
+        ws.column_dimensions[column_letter].width = adjusted_width
+
+    # Sidinställningar för A4 liggande
+    ws.page_setup.paperSize = 9  # A4
+    ws.page_setup.orientation = "portrait"
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.page_margins = PageMargins(left=0.5, right=0.5, top=0.75, bottom=0.75)
+
+    # Spara tillfällig fil
+    import tempfile
+    import os
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+        file_path = tmp.name
+        wb.save(file_path)
+
+    return file_path
+
+# ============================================================
+# PRINT DIRECT FROM APP WINDOW
+# ============================================================
 def print_excel(df):
     if df.empty:
         messagebox.showinfo("Ingen data", "Det finns ingen data att skriva ut.")
         return
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-        temp_path = tmp.name
-        with pd.ExcelWriter(temp_path, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='Data')
-            worksheet = writer.sheets['Data']
-            worksheet.freeze_panes = worksheet['A2']
-
-            # Lägg till rutor runt alla celler
-            thin_border = Border(
-                left=Side(style='thin'),
-                right=Side(style='thin'),
-                top=Side(style='thin'),
-                bottom=Side(style='thin')
-            )
-
-            for row in worksheet.iter_rows(min_row=1, max_row=worksheet.max_row,
-                                            min_col=1, max_col=worksheet.max_column):
-                for cell in row:
-                    cell.border = thin_border
-
     try:
-        if os.name == 'nt':
-            os.startfile(temp_path, "print")
+        file_path = create_formatted_excel(df)
+        if not file_path:
+            messagebox.showerror("Fel", "Kunde inte skapa Excel-filen för utskrift.")
+            return
+
+        if os.name == 'nt':    
+            # === TESTLÄGE: öppna istället för att skriva ut ===
+            # os.startfile(file_path)  # ← Kommentera bort denna rad för att aktivera utskrift
+            os.startfile(file_path, "print")  # ← Avkommentera denna rad för att skriva ut direkt
         else:
-            os.system(f"lp {temp_path}")
+            os.system(f"lp {file_path}")
+
     except Exception as e:
         messagebox.showerror("Fel", f"Kunde inte skriva ut Excel-filen:\n{e}")
 
-
-
-# GUI-applikation
+# ============================================================
+# GUI APPLICATION (TKINTER)
+# ============================================================
 class JournalApp:
+    # ============================================================
+    # INIT
+    # ============================================================
     def __init__(self, root):
         self.root = root
         self.root.title("AX Multipick Companion")
         self.status_logger = StatusLogger(root)
-
+        self.cancel_requested = False # Flagga för att avbryta
         self.df = pd.DataFrame()
 
         tk.Label(root, text="Company Code:").grid(row=0, column=0, sticky="w")
@@ -195,21 +300,15 @@ class JournalApp:
             entry.grid(row=i+1, column=1, columnspan=2, sticky="we")
             self.work_order_entries.append(entry)
 
-
-### TEST ###
-        self.work_order_entries[0].insert(0, "3MO-041069") 
-        # self.work_order_entries[1].insert(0, "3MO-042393") 
-        # self.work_order_entries[2].insert(0, "3MO-042288") 
-        # self.work_order_entries[3].insert(0, "3MO-042077") 
-### TEST ###
-
         self.fetch_button = tk.Button(root, text="Fetch Data", command=self.fetch_and_display)
         self.fetch_button.grid(row=11, column=0, columnspan=3, pady=10)
 
         self.tree = ttk.Treeview(root, show="headings")
         self.tree.grid(row=12, column=0, columnspan=3, sticky="nsew")
-        
-        # Stil för Treeview med "rutor"
+
+# ============================================================
+# STYLE FORMATTING FOR TABLE (TREEVIEW - TKINTER)
+# ============================================================
         style = ttk.Style()
         style.configure("Treeview",
                         background="white",
@@ -228,45 +327,122 @@ class JournalApp:
         self.tree.tag_configure("evenrow", background="#f2f2f2")
         self.tree.tag_configure("oddrow", background="#ffffff")
 
-
         scrollbar = ttk.Scrollbar(root, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
         self.tree.config(height=20)
-
         scrollbar.grid(row=12, column=3, sticky="ns")
-
 
         root.grid_rowconfigure(12, weight=1)
         root.grid_rowconfigure(13, weight=0)
 
-
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
         root.maxsize(screen_width, screen_height)
-               
+
+# ============================================================
+# BUTTONS (TKINTER)
+# ============================================================               
         self.export_button = tk.Button(root, text="📊 Exportera till Excel", command=lambda: self.export_and_open_excel_with_formatting_and_fit(self.df, self.status_logger))
         self.export_button.grid(row=13, column=0, sticky="w", pady=10)
 
-        
         self.root.update()
         self.root.minsize(self.root.winfo_width(), self.root.winfo_height())
-##   Skriv ut direkt knapp  ##
+
         self.print_button = tk.Button(root, text="🖨️ Skriv ut", command=lambda: print_excel(self.df))
         self.print_button.grid(row=13, column=1, sticky="w", pady=10)
 
+        self.cancel_button = tk.Button(root, text="❌ Avbryt", command=self.cancel_operation)
+        self.cancel_button.grid(row=13, column=2, sticky="e", pady=10)
 
+    # ============================================================
+    # MENU BAR
+    # ============================================================
+        menubar = tk.Menu(self.root)
 
-    def fetch_and_display(self):
-        cmpy = self.cmpy_entry.get().strip()
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Inställningar", command=self.open_settings)
+        file_menu.add_separator()
+        file_menu.add_command(label="Avsluta", command=self.root.quit)
+        menubar.add_cascade(label="Arkiv", menu=file_menu)
 
+        help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu.add_command(label="Om", command=self.show_about)
+        menubar.add_cascade(label="Hjälp", menu=help_menu)
+
+        self.root.config(menu=menubar)
+
+    # ============================================================
+    # ABOUT MENU
+    # ============================================================
+    def show_about(self):
+        messagebox.showinfo(
+            "Om",
+            "AX Multipick Companion\n\n"
+            "Version: 1.0.0\n"
+            "Utvecklad av: Mathias Fredriksson\n\n"
+            "Detta verktyg är skapat för att förenkla hantering av multipick-data\n"
+            "från AX-systemet. Programmet möjliggör inmatning av arbetsorder,\n"
+            "hämtning av data, export till Excel samt utskrift.\n\n"
+        )
+
+    # ============================================================
+    # SETTINGS MENU
+    # ============================================================
+    def open_settings(self):
+        # Skapa nytt fönster
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title("Inställningar")
+        settings_window.geometry("300x150")
+        settings_window.grab_set()  # Gör fönstret modal
+
+        tk.Label(settings_window, text="Välj Company Code:").pack(pady=10)
+
+        # Alternativ för rullistan
+        company_codes = ["SE04", "DK01", "FI02", "NO03", "DE05"]
+
+        # Skapa en StringVar för att hålla det valda värdet
+        selected_code = tk.StringVar()
+        selected_code.set(self.cmpy_entry.get())  # Förvalt värde
+
+        # Skapa rullistan
+        dropdown = ttk.Combobox(settings_window, textvariable=selected_code, values=company_codes, state="readonly")
+        dropdown.pack(pady=5)
+
+        # Bekräfta-knapp
+        def apply_selection():
+            self.cmpy_entry.config(state="normal")
+            self.cmpy_entry.delete(0, tk.END)
+            self.cmpy_entry.insert(0, selected_code.get())
+            self.cmpy_entry.config(state="readonly")
+            settings_window.destroy()
+
+        tk.Button(settings_window, text="OK", command=apply_selection).pack(pady=10)
+
+    
+# ============================================================
+# CANCEL FUNCTION
+# ============================================================
+    def cancel_operation(self):
+        self.cancel_requested = True
         if self.status_logger:
-            self.status_logger.start("Hämtar data")
-        
-        # Kör själva dataladdningen med liten fördröjning så GUI hinner uppdateras
-        self.root.after(100, self._fetch_and_display_data)
+            self.status_logger.stop("Avbrutet av användaren ❌")
 
+# ============================================================
+# INITIATE RETRIEVAL AND START LOG ANIMATION
+# ============================================================
+    def fetch_and_display(self):
+        self.cancel_requested = False
+        if self.status_logger:
+            self.status_logger.start("Hämtar data...")
+        threading.Thread(target=self._fetch_and_display_data).start()
+
+# ============================================================
+# RETREIVE DATA AND DISPLAY IN TABLE
+# ============================================================
     def _fetch_and_display_data(self):
-        # Hämta input från GUI
+        if self.cancel_requested:
+            return
+
         cmpy = self.cmpy_entry.get().strip()
         work_orders = [entry.get().strip() for entry in self.work_order_entries if entry.get().strip()]
 
@@ -299,7 +475,6 @@ class JournalApp:
                 tag = "evenrow" if i % 2 == 0 else "oddrow"
                 self.tree.insert("", "end", values=list(row), tags=(tag,))
 
-
             # Justera höjd på Treeview
             num_rows = len(df)
             max_rows = 30
@@ -323,8 +498,9 @@ class JournalApp:
                 self.status_logger.stop("Fel vid hämtning ❌")
             messagebox.showerror("Error", str(e))
 
-
-
+# ============================================================
+# EXPORT TO EXCEL AND OPEN
+# ============================================================
     def export_and_open_excel_with_formatting_and_fit(self, df, status_logger):
         if self.status_logger:
             self.status_logger.start("Förbereder export")
@@ -333,112 +509,29 @@ class JournalApp:
             messagebox.showinfo("Ingen data", "Det finns ingen data att exportera.")
             return
 
-
-    # Anpassade rubriker med radbrytningar
-        custom_headers = {
-            "Total pick QTY": "Total\npick QTY",
-            "On hand QTY": "On hand\nQTY",
-            "QTY On CON/LTB PO": "QTY On\nCON/LTB PO",
-            "QTY on PO delivery latest today": "QTY on\nPO delivery\nlatest today",
-            "Number of orders": "No of\norders"
-        }
-        df.columns = [custom_headers.get(col, col) for col in df.columns]
-        
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Data"
-
-        # Fasta kolumnbredder
-        fixed_widths = {
-            # "A": 30,  # ItemId
-            # "B": 20,  # Line QTY
-            # "C": 15,  # Total pick QTY
-            "D": 5.4,  # Unit 
-            "E": 10,  # Location 
-            "F": 10,  # On Hand QTY
-            # "G": 25,  # QTY On CON/LTB PO
-            "H": 10,  # Shortage
-            "I": 12,   # QTY on PO delivery latest today
-            "J": 10   # No Of Orders
-
-        }
-
-        for col_letter, width in fixed_widths.items():
-            ws.column_dimensions[col_letter].width = width
-
-        # Färger och stilar
-        header_fill = PatternFill(start_color="0070C0", end_color="0070C0", fill_type="solid")
-        header_font = Font(color="FFFFFF", bold=True)
-        alt_fill = PatternFill(start_color="D8E0F3", end_color="D8E0F3", fill_type="solid")
-        ws.row_dimensions[1].height = 42  # Justera värdet efter behov
-
-        # Skriv in data och formatera
-        for r_idx, row in enumerate(dataframe_to_rows(df, index=False, header=True), start=1):
-            for c_idx, value in enumerate(row, start=1):
-                cell = ws.cell(row=r_idx, column=c_idx, value=value)
-                if r_idx == 1:
-                    cell.fill = header_fill
-                    cell.font = header_font
-                    cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-
-                elif r_idx % 2 == 0:
-                    cell.fill = alt_fill
-
-        # Lås rubrikraden
-        ws.freeze_panes = "A2"
-
-        # Anpassa kolumnbredd till innehåll, men begränsa maxbredd
-        min_width = 15  # eller vad som passar din layout
-        max_width = 40  # ungefärlig maxbredd för att passa på A4 liggande
-        
-        for col_idx in range(1, ws.max_column + 1):
-            column_letter = get_column_letter(col_idx)
-            if column_letter in fixed_widths:
-                continue  # Hoppa över fasta kolumner
-
-            max_length = 0
-            for row in range(2, ws.max_row + 1):
-                cell = ws.cell(row=row, column=col_idx)
-                if cell.value:
-                    max_length = max(max_length, len(str(cell.value)))
-            adjusted_width = max(min_width, min(max_length + 2, max_width))
-            ws.column_dimensions[column_letter].width = adjusted_width
-
-
-            # Sidinställningar för A4 liggande
-            ws.page_setup.paperSize = 9  # A4
-            ws.page_setup.orientation = "landscape"
-            ws.page_setup.fitToWidth = 1
-            ws.page_setup.fitToHeight = 0
-            ws.page_margins = PageMargins(left=0.5, right=0.5, top=0.75, bottom=0.75)
-
-        # Spara tillfällig fil och öppna
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-            file_path = tmp.name
-            wb.save(file_path)
-
-        if self.status_logger:
-            self.status_logger.stop("Export klar ✅")
-
-
         try:
+            file_path = create_formatted_excel(df)
+            if not file_path:
+                raise Exception("Kunde inte skapa Excel-filen.")
+
+            if self.status_logger:
+                self.status_logger.stop("Export klar ✅")
+
+            # Öppna filen för inspektion
             if os.name == 'nt':
                 os.startfile(file_path)
             else:
                 os.system(f"open {file_path}")
+
         except Exception as e:
-            messagebox.showerror("Fel", f"Kunde inte öppna Excel-filen:\n{e}")
+            messagebox.showerror("Fel", f"Kunde inte exportera Excel-filen:\n{e}")
             if status_logger:
                 status_logger.stop("Fel vid export ❌")
 
 
-    ##############################################
-    #  Skriv ut direkt funktion:
-
-   
-    ##############################################
-
-
+# ============================================================
+# ENTRY POINT – START THE APPLICATION AND HANDLE EXIT
+# ============================================================
 if __name__ == "__main__":
     try:
         root = tk.Tk()
