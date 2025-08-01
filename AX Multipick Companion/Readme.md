@@ -1,32 +1,50 @@
-# AX Multipick Companion
+# AX Multipicking Companion
 
-**AX Multipick Companion** är ett grafiskt verktyg byggt i Python med Tkinter som hjälper produktionspersonal att hämta, analysera och skriva ut plockdata från Microsoft Dynamics AX. Verktyget är särskilt användbart för att identifiera materialbrister och hantera multipla produktionsorder samtidigt.
+## 🧠 Vad är detta?
 
-## 🧩 Funktioner
+Här har jag byggt ett Python-program med grafiskt gränssnitt (GUI) i Tkinter som jag kallar **AX Multipicking Companion**. Syftet är att hjälpa mig och mina kollegor att hämta och hantera plocklistor från arbetsorder i AX-systemet på ett smidigt sätt.
 
-- 🔍 Hämta plockdata från AX för flera produktionsorder
-- 📊 Visa data i ett interaktivt tabellgränssnitt (Treeview)
-- 📥 Exportera data till Excel med formatering och kolumnanpassning
-- 🖨️ Skriv ut direkt från Excel
-- ✅ Visuell statuslogg för att följa arbetsflödet
+Jag skapade detta projekt som en del av min egen lärresa i Python – för att förstå hur man bygger riktiga applikationer med databasanslutning, GUI, export till Excel och utskrift. Det har varit ett sätt för mig att kombinera nytta med lärande.
 
-## 🖼️ Skärmbilder
+---
 
-*(Lägg gärna till skärmbilder här om du vill visa gränssnittet)*
+## ⚙️ Funktioner
 
-## 🛠️ Teknologier
+- ✅ Inmatning av upp till 10 arbetsorder
+- ✅ Automatisk hämtning av data från SQL Server via SQLAlchemy
+- ✅ Visning av resultat i en tabell med färgade rader (Treeview)
+- ✅ Export till formaterad Excel-fil med radbrytningar, färger och kommentarer
+- ✅ Direkt utskrift av Excel-filen
+- ✅ Inställningsfönster med rullista för att välja Company Code
+- ✅ Statuslogg som visar vad som händer i bakgrunden
 
-- Python 3.x
-- Tkinter (GUI)
-- Pandas
-- SQLAlchemy
-- OpenPyXL
-- Microsoft SQL Server (via pyodbc)
+---
 
-## ⚙️ Installation
+## 🏗️ Hur fungerar det?
 
-1. Klona detta repo:
-   ```bash
-   git clone https://github.com/ditt-användarnamn/ax-multipick-companion.git
-   cd ax-multipick-companion
-   ```
+1. Jag matar in arbetsorder i fälten.
+2. Trycker på **Fetch Data** – då körs en SQL-fråga mot AX-databasen.
+3. Resultatet visas i en tabell.
+4. Jag kan exportera till Excel eller skriva ut direkt.
+5. Jag kan ändra Company Code via menyn **Inställningar**.
+
+---
+
+## 🧪 Teknisk översikt
+
+- **GUI:** Tkinter
+- **Databas:** SQL Server via SQLAlchemy
+- **Excel-export:** openpyxl
+- **Utskrift:** `os.startfile()` (Windows)
+- **Trådning:** `threading` för att inte frysa GUI
+- **Kommentarer i Excel:** `openpyxl.comments.Comment`
+
+---
+
+## 🚀 Hur kör jag programmet?
+
+1. Se till att du har **Python 3.10+** installerat.
+2. Installera beroenden:
+
+```bash
+pip install pandas sqlalchemy pyodbc openpyxl
