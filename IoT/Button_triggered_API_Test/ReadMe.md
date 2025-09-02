@@ -1,6 +1,6 @@
 # Arduino-knapp → Flask-API med WiFi‑uppkoppling från EEPROM
 
-> **Syfte (TL;DR):** När en fysisk knapp trycks på Arduino skickas ett HTTP POST till ett lokalt Flask‑API. WiFi‑SSID/lösenord läses från EEPROM via ett litet hjälpbibliotek (WiFiEEPROM) så att inloggningen inte hårdkodas i sketchen.
+> **Syfte :** När en fysisk knapp trycks på Arduino skickas ett HTTP POST till ett lokalt Flask‑API. WiFi‑SSID/lösenord läses från EEPROM via ett litet hjälpbibliotek (WiFiEEPROM) så att inloggningen inte hårdkodas i sketchen.
 
 ---
 
@@ -21,14 +21,12 @@
 13. [Kända begränsningar](#kända-begränsningar)
 14. [Ändringslogg](#ändringslogg)
 
-> **Terminologi & riktighet:** Jag korrigerar felaktiga begrepp där det behövs och noterar vad som är **verifierat** i koden vs. vad som är **antagande/att kontrollera** för din specifika hårdvara.
-
 ---
 
 ## Översikt
 
 * **Arduino‑sketch** läser SSID/lösenord från EEPROM (via `WiFiEEPROM.h/.cpp`), ansluter till WiFi (bibliotek **WiFiS3**) och väntar på knapptryck (ingång med `INPUT_PULLUP`).
-* Vid **fallande flank** (HIGH→LOW) skickas ett **HTTP POST** med JSON‑payload `{"status":"press"}` till en **Flask‑server** på din dator (`/api/button`).
+* Vid **fallande flank** (HIGH→LOW) skickas ett **HTTP POST** med JSON‑payload `{"status":"press"}` till en **Flask‑server** på PC (`/api/button`).
 * **Flask‑appen** tar emot POST, skriver ut payload och svarar med `{"message":"Mottaget!"}`.
 
 ```text
@@ -45,7 +43,7 @@ EEPROM (SSID/PW)         HTTP POST → 192.168.1.100:5000/api/button
 
 ## Varför denna design
 
-* **Konfig separat från kod:** SSID/lösenord i EEPROM gör att du kan byta nätverk utan ny flashning. (Verifierat: biblioteket läser/skriv­er bytes till fasta offset.)
+* **Konfig separat från kod:** SSID/lösenord i EEPROM gör att vi kan byta nätverk utan ny flashning. (Verifierat: biblioteket läser/skriv­er bytes till fasta offset.)
 * **Enkel, transparent HTTP:** Rå `WiFiClient` + manuella HTTP‑headers ger full kontroll och minimala beroenden.
 * **Edge‑detektering på knapp:** Mindre brus än att polla kontinuerligt; enkelt att bygga vidare med debounce.
 * **Flask för snabb prototyp:** Minimal server för att testa integrationskedjan från maskin → API.
@@ -54,7 +52,8 @@ EEPROM (SSID/PW)         HTTP POST → 192.168.1.100:5000/api/button
 
 ## Arkitektur
 
-* **Hårdvara**: Arduino‑kort med stöd för **WiFiS3** (t.ex. *UNO R4 WiFi / GIGA R1 / Portenta C33*). **Antagande**: kontrollera att ditt kort verkligen använder `WiFiS3`; annars krävs rätt bibliotek (t.ex. `WiFiNINA` för MKR WiFi 1010).
+* **Hårdvara**: Arduino‑kort med stöd för **WiFiS3** (Jag har testat med en Arduino UNO R4 WiFi).
+* **Antagande**: Jag har läst mig till att detta kort verkar använda `WiFiS3`; omd etta är fel så kan ett annat bibliotek behövas (t.ex. `WiFiNINA`?).
 * **Nätverk**: Datorn kör Flask på **port 5000** och är nåbar från Arduinons nät. IP hårdkodas i sketchen (`192.168.1.100`).
 * **Lagring**: SSID/lösenord sparas i **EEPROM** på fasta adresser.
 
@@ -69,7 +68,8 @@ EEPROM (SSID/PW)         HTTP POST → 192.168.1.100:5000/api/button
 └─ python script (Flask-servern)
 ```
 
-* **Sketch**: Initierar seriell, knapp‑pin med `INPUT_PULLUP`, kallar `EEPROM.begin()` (*antagande*: på vissa plattformar krävs detta), läser SSID/PW via `getSSID()/getPassword()`, ansluter till WiFi och lyssnar på knapp.
+* **Sketch**: Initierar seriell, knapp‑pin med `INPUT_PULLUP`, kallar `EEPROM.begin()` 
+(*antagande*: på vissa plattformar krävs detta), läser SSID/PW via `getSSID()/getPassword()`, ansluter till WiFi och lyssnar på knapp.
 * **WiFiEEPROM**: Tillhandahåller `readWiFiCredentials()`, `writeWiFiCredentials()`, `setupWiFi()`, `getSSID()`, `getPassword()`.
 * **Flask**: En enkel endpoint `/api/button` som tar emot JSON över POST.
 
@@ -91,8 +91,6 @@ EEPROM (SSID/PW)         HTTP POST → 192.168.1.100:5000/api/button
 
 ## EEPROM‑hantering (WiFiEEPROM)
 
-**Verifierat i koden:**
-
 * **Layout:**
 
   * SSID: adresser `0 .. SSID_MAX_LEN-1` (32 bytes)
@@ -102,8 +100,9 @@ EEPROM (SSID/PW)         HTTP POST → 192.168.1.100:5000/api/button
 
 **Att kontrollera per plattform:**
 
-* På vissa kort (t.ex. ESP‑familjen, UNO R4) krävs **`EEPROM.begin(size)`** innan läs/skriv och **`EEPROM.commit()`** efter skrivning. Din sketch anropar `EEPROM.begin()` men **`EEPROM.commit()` saknas** i `writeWiFiCredentials()`; lägg till commit om ditt kort kräver det.
-* Nuvarande lösning saknar **"magic"/version** för att veta om EEPROM är initierad. Överväg att reservera t.ex. 4 bytes (`'W','I','F','I'`) som header.
+* På vissa kort krävs **`EEPROM.begin(size)`** innan läs/skriv och **`EEPROM.commit()`** efter skrivning. 
+Denna sketch anropar `EEPROM.begin()` men **`EEPROM.commit()` saknas** i `writeWiFiCredentials()`; då jag inte sett att UNO R4 kräver commit(?)
+
 
 ---
 
