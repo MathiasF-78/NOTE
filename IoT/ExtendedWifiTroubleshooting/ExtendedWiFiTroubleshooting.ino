@@ -1,3 +1,14 @@
+
+
+
+//
+//
+// OLED och anslutning fungerar, inte RGB eller button funktion
+//
+//
+
+
+
 // Tools → Board → Arduino Uno R4 WiFi
 
 #include <WiFiS3.h>
