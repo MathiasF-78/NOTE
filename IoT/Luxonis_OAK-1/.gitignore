@@ -1,0 +1,12 @@
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+*.log
+
+
+
+Versionera även examples/ och docs/ så nya teammedlemmar snabbt kan testa och förstå flöden.
+Om ni vill, skapa en “template” repo som kan kopieras för nya OAK-1 projekt.
