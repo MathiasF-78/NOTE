@@ -1,27 +1,43 @@
-# Arduino RFID Access Control with OLED and RGB LED
-## Version 1
+# Arduino RFID + OLED + RGB LED + LED Matrix
 
-This project implements a simple access control system using an Arduino, RFID reader, RGB LED, push button, and OLED display. It can be used as a prototype for integrating RFID-based access with visual feedback.
+This project implements a prototype access control system with **API simulation**, using:
+- RFID reader (MFRC522)
+- OLED display (128x64)
+- RGB LED
+- Push button
+- Arduino LED Matrix (12x8)
+
+The system simulates communication with **IFS Cloud** on the first button press, then toggles between "Access Granted" and "Access Denied" with visual and LED feedback.  
+If access is denied, the LED matrix displays a middle finger icon.
+
+---
 
 ## Features
 
-- Reads RFID tags using the MFRC522 module.
-- Displays status messages on a 128x64 OLED display.
-- RGB LED indicates system status:
-  - Blue: Standby
-  - Green: Access Granted
-  - Red: Access Denied
-- Push button toggles access state manually.
-- Simulated communication with an external system (e.g., IFS) when a tag is detected.
+- **API simulation flow** on first button press:
+  1. Connecting to IFS Cloud...
+  2. API Communication...
+  3. Retrieving Data...
+  4. Access Denied + Matrix animation
+- **Button-controlled toggling** between Access Granted / Denied (after first simulation).
+- **OLED display** shows messages.
+- **RGB LED** indicates state:
+  - Blue = Standby
+  - Green = Access Granted
+  - Red = Access Denied
+- **LED Matrix** displays a middle finger when access is denied.
+
+---
 
 ## Hardware Requirements
 
 - Arduino board (e.g., Uno, Mega)
-- MFRC522 RFID reader
+- MFRC522 RFID reader (not actively used in this revision, but ready for extension)
 - OLED display (128x64, I2C)
 - RGB LED (common cathode)
 - Push button
-- Connecting wires and resistors
+- Arduino LED Matrix (12x8)
+- Wires and resistors
 
 ### Pin Configuration
 
@@ -34,37 +50,56 @@ This project implements a simple access control system using an Arduino, RFID re
 | RFID SS         | 9         |
 | RFID RST        | 6         |
 | OLED I2C        | SDA/SCL   |
+| LED Matrix      | Arduino Nano 33 BLE / compatible board |
+
+---
 
 ## Libraries Required
 
 - [Adafruit SSD1306](https://github.com/adafruit/Adafruit_SSD1306)
 - [MFRC522](https://github.com/miguelbalboa/rfid)
+- [Arduino_LED_Matrix](https://github.com/arduino-libraries/Arduino_LED_Matrix)
 - SPI (built-in Arduino)
 - Wire (built-in Arduino)
-- WiFiEEPROM (optional, for saving data persistently)
+
+---
 
 ## Usage
 
-1. Connect all hardware according to the pin configuration.
+1. Connect all components according to the pin configuration.
 2. Install required libraries in Arduino IDE.
-3. Upload the code to your Arduino.
-4. Open Serial Monitor at 115200 baud to see debug messages.
-5. The system starts in standby (blue LED).
-6. Press the button to toggle access manually.
-7. Present an RFID tag to the reader to simulate system communication. Access will be denied by default.
+3. Upload the sketch to your Arduino.
+4. Open Serial Monitor at **115200 baud** for debug output.
+5. **System start:**
+   - OLED → "System Ready"
+   - RGB LED → Blue
+6. **First button press:**
+   - Simulates API communication with IFS Cloud.
+   - Ends with Access Denied (Red LED + Matrix middle finger).
+7. **Subsequent presses:**
+   - Toggles between "Access Granted" (Green LED) and "Access Denied" (Red LED + Matrix).
+
+---
 
 ## Functions
 
-- `displayMessage(String msg, bool clear=true)` – Displays a message on the OLED.
-- `setRGBColor(int r, int g, int b)` – Sets the RGB LED color.
-- `handleButton()` – Handles push button presses to toggle access.
-- `handleRFID()` – Handles RFID tag detection and simulates communication with external systems.
+- `displayMessage(String msg, bool clear=true)`  
+  Displays a message on the OLED.
+- `setRGBColor(int r, int g, int b)`  
+  Sets the RGB LED color (0–255 per channel).
+- `showMiddleFinger()`  
+  Renders the middle finger bitmap on the LED Matrix.
+
+---
 
 ## Notes
 
-- The RFID communication with IFS is simulated with a delay and a message display.
-- Ensure proper wiring of the RGB LED (common cathode) and OLED display.
-- The button uses `INPUT_PULLUP`, so connect one side to GND.
+- The RFID module is initialized but not yet used in this revision.  
+  It can be integrated to trigger API simulation instead of button presses.  
+- Button uses **INPUT_PULLUP** – connect to GND when pressed.
+- LED Matrix requires an Arduino board that supports the **Arduino_LED_Matrix library**.
+
+---
 
 ## License
 
