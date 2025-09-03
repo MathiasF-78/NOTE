@@ -118,12 +118,10 @@ with dai.Device(pipeline) as device:
         if cv2.waitKey(1) == ord('q'):
             break
    ```
-
-#### Funktioner
-- Live video från OAK-1 → Raspberry Pi 7" touchscreen
-- QR-kod detektering med pyzbar
-- GS1 parser för Application Identifiers (GTIN, batch, BBD, serienummer)
-- Overlay av dekrypterad data på bildström
+## 🔗 Anslutningar
+```text
+🖧 🔌 ⚡ 🔗 TBD 🔗 ⚡ 🔌 🖧
+```
 
 ### Kör
    ```bash
@@ -131,11 +129,16 @@ python3 gs1_qr_reader.py
    ```
 Avsluta med "Q"
 
+#### Funktioner
+- Live video från OAK-1 → Raspberry Pi 7" touchscreen
+- QR-kod detektering med pyzbar
+- GS1 parser för Application Identifiers (GTIN, batch, BBD, serienummer)
+- Overlay av dekrypterad data på bildström
 
-📌 TODO
+## 📌 TODO
 - Lägg till stöd för fler GS1 Application Identifiers
 - Export av data till fil/databas/REST API
 - Integrering mot MES/ERP (t.ex. IFS Cloud)
 
-📜 Licens
+## 📜 Licens
 MIT License – fritt att använda och vidareutveckla.
