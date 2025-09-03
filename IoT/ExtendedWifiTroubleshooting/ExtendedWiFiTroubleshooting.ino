@@ -9,10 +9,19 @@
 #define SSID_MAX_LEN     32
 #define PASSWORD_MAX_LEN 64
 
-#define RED_PIN    3
-#define GREEN_PIN  5
-#define BLUE_PIN   6
-#define BUTTON_PIN 7
+// RGB:
+#define RED_PIN    3 // Digital
+#define GREEN_PIN  5 // Digital
+#define BLUE_PIN   6 // Digital
+// GND PIN
+
+// Momentary Button Module:
+#define BUTTON_PIN 7 // Digital
+// GND PIN
+
+// OLED:
+// OLED SDA (I2C) PIN A4 // Analog
+// OLED SCL (I2C) PIN A5 // Analog
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
