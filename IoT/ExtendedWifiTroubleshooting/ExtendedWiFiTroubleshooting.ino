@@ -1,5 +1,4 @@
 // Tools → Board → Arduino Uno R4 WiFi
-// 220 ohm resisters for each R,G,B channel for the LED Module
 
 #include <WiFiS3.h>
 #include <EEPROM.h>
@@ -10,9 +9,9 @@
 #define PASSWORD_MAX_LEN 64
 
 // RGB:
-#define RED_PIN    3 // Digital
-#define GREEN_PIN  5 // Digital
-#define BLUE_PIN   6 // Digital
+#define RED_PIN    3 // Digital with 220 - 330 ohm resistor
+#define GREEN_PIN  5 // Digital with 220 - 330 ohm resistor
+#define BLUE_PIN   6 // Digital with 220 - 330 ohm resistor
 // GND PIN
 
 // Momentary Button Module:
