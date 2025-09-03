@@ -1,7 +1,8 @@
-# Arduino RFID + OLED + RGB LED + LED Matrix
+# RFID Authentication with IFS Cloud - Simulation
+### Using Arduino UNO R4 WIFI + RGB LED + LED Matrix + Momentary button
 
 This project implements a prototype access control system with **API simulation**, using:
-- RFID reader (MFRC522)
+- RFID reader (MFRC522) - Not yet implemented
 - OLED display (128x64)
 - RGB LED
 - Push button
