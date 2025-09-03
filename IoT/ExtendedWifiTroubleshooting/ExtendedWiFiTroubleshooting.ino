@@ -1,4 +1,4 @@
-// Tools → Board → Arduino Uno R4 WiFi
+220 ohm resisters for each R,G,B channel for the LED Module// Tools → Board → Arduino Uno R4 WiFi
 
 #include <WiFiS3.h>
 #include <EEPROM.h>
