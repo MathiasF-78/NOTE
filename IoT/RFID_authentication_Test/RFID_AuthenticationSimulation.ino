@@ -4,9 +4,25 @@
 #include <MFRC522.h>
 #include <Arduino_LED_Matrix.h>
 
+ArduinoLEDMatrix matrix;  // <--- Nu deklarerad korrekt
+
+// Långfinger på 12x8 LED-matris
+uint8_t middleFinger[8][12] = {
+  {0,0,0,0,0,1,0,0,0,0,0,0},  // långfingret topp
+  {0,0,0,0,0,1,0,0,0,0,0,0},
+  {0,0,0,0,0,1,0,0,0,0,0,0},
+  {0,0,0,0,0,1,0,0,0,0,0,0},  // långfingret fortsätter
+  {0,1,0,1,1,1,1,1,0,1,0,0},  // handflata + ring/lillfinger/pekfinger
+  {0,1,0,1,0,0,0,1,0,1,0,0},  
+  {0,1,0,1,0,0,0,1,0,1,0,0},  
+  {0,0,0,0,0,0,0,0,0,0,0,0}   // tom rad
+};
+
+
 // --- Funktionsprototyper ---
 void displayMessage(String msg, bool clear=true);
 void setRGBColor(int r, int g, int b);
+void showMiddleFinger();  // <-- prototyp
 
 // --- OLED ---
 #define SCREEN_WIDTH 128
@@ -34,6 +50,8 @@ bool apiSimulationDone = false; // Indikerar att API-simuleringen är klar
 bool toggleNext = false; 
 
 void setup() {
+  matrix.begin(); //Finger Matrix
+
   Serial.begin(115200);
   Wire.begin();
   
@@ -79,6 +97,7 @@ void loop() {
       accessGranted = false;
       displayMessage("Access Denied");
       setRGBColor(255,0,0);
+      showMiddleFinger();
 
       apiSimulationDone = true; // Nu kan växling börja
   }
@@ -96,6 +115,7 @@ if(buttonState && !lastButtonState && apiSimulationDone) {
         } else {
             displayMessage("Access Denied");
             setRGBColor(255,0,0);
+            showMiddleFinger();
         }
     }
 }
@@ -117,4 +137,8 @@ void setRGBColor(int r, int g, int b) {
   analogWrite(RED_PIN, r);
   analogWrite(GREEN_PIN, g);
   analogWrite(BLUE_PIN, b);
+}
+
+void showMiddleFinger() {
+  matrix.renderBitmap(middleFinger, 8, 12);
 }
