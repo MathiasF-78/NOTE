@@ -1,3 +1,4 @@
+// Tools → Board → Arduino Uno R4 WiFi
 
 #include <WiFiS3.h>
 #include <EEPROM.h>
