@@ -1,1 +1,4 @@
-
+depthai  
+opencv-python  
+pyzbar  
+Pillow  
