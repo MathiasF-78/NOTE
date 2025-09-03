@@ -1,7 +1,7 @@
 # WiFiTroubleshooting Extended Sketch #
 Denna Arduino-sketch är en utökning av originalet WiFiTroubleshooting.ino i NOTE-repot. Den lägger till stöd för:
 
-HW-479 RGB LED-modul
+#### HW-479 RGB LED-modul ####
 SSD1306 OLED-display (I2C)
 Momentan knappmodul
 🔧 Hårdvarukrav
